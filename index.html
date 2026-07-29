@@ -1,19 +1,93 @@
-<!doctype html>
-<html>
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width" />
-		<title>My static Space</title>
-		<link rel="stylesheet" href="style.css" />
-	</head>
-	<body>
-		<div class="card">
-			<h1>Welcome to your static Space!</h1>
-			<p>You can modify this app directly by editing <i>index.html</i> in the Files and versions tab.</p>
-			<p>
-				Also don't forget to check the
-				<a href="https://huggingface.co/docs/hub/spaces" target="_blank">Spaces documentation</a>.
-			</p>
-		</div>
-	</body>
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dini İlimler & Ezan Vakti AI Asistanı</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="main-header">
+            <div class="header-icon">🕌</div>
+            <div class="header-content">
+                <h1>Dini İlimler & Ezan Vakti AI Asistanı</h1>
+                <p>Multi-API Tool Calling Engine | Aladhan, AlQuran Cloud & Sahih Hadis Veritabanı</p>
+            </div>
+            <div class="hf-badge">Hugging Face Space Live</div>
+        </header>
+
+        <!-- Main Content (2 Columns Layout) -->
+        <main class="content-grid">
+            <!-- Left Panel: Chat Interface -->
+            <section class="card chat-card">
+                <div class="card-header">
+                    <h2>💬 Asistan ile Sohbet Edin</h2>
+                    <span class="status-indicator">● Canlı & Aktif</span>
+                </div>
+                
+                <div class="chat-history" id="chatHistory">
+                    <!-- Default Welcome Message -->
+                    <div class="message bot-message">
+                        <div class="avatar">🤖</div>
+                        <div class="message-content">
+                            <p><strong>Selamün Aleyküm!</strong> Ben Dini İlimler ve Ezan Vakti AI Asistanınızım.</p>
+                            <p>Bana ezan vakitlerini, hicri takvimi, ayet ve meal meallerini, sahih hadisleri ve fıkhi sorularınızı sorabilirsiniz.</p>
+                            <p><em>Örnek: "İstanbul'da Akşam namazına kaç saat var ve abdest hakkındaki ayet nedir?"</em></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Example Chips -->
+                <div class="example-chips">
+                    <span class="chip-title">💡 Hazır Sorular:</span>
+                    <button class="chip" onclick="fillQuery(this.innerText)">İstanbul'da bugün Akşam namazına kaç saat kaldı ve bugün Hicri takvimde hangi güne denk geliyor?</button>
+                    <button class="chip" onclick="fillQuery(this.innerText)">Abdesti bozan durumlar ve abdest hakkındaki Kur'an ayeti ile Hadis-i Şerif nedir?</button>
+                    <button class="chip" onclick="fillQuery(this.innerText)">Ankara için bugünkü ezan vakitleri nelerdir ve 2026 yılı Kadir Gecesi ne zaman?</button>
+                </div>
+
+                <!-- Input Box -->
+                <form id="chatForm" class="input-form">
+                    <input type="text" id="userInput" placeholder="Soru yazınız (ör. 'İstanbul namaz vakitleri ve abdest ayeti')..." autocomplete="off" required>
+                    <button type="submit" id="sendBtn" class="btn-primary">
+                        <span>Gönder</span> 🚀
+                    </button>
+                </form>
+            </section>
+
+            <!-- Right Panel: Homework Evaluator Tool Call Trace Log -->
+            <section class="card trace-card">
+                <div class="card-header">
+                    <h2>🔍 Arka Plan Araç (Tool) Çağrı İzleme</h2>
+                    <span class="badge-homework">Ödev Modu</span>
+                </div>
+
+                <div class="trace-intro">
+                    <p>ℹ️ <strong>Ödev Şartı Gösterimi:</strong> Modelin arka planda hangi harici API'leri tetiklediği, parametreleri ve dönen JSON yanıtları <code>[Turn 1]</code> ve <code>[Turn 2]</code> olarak burada sergilenir.</p>
+                </div>
+
+                <div class="trace-log-body" id="traceLogBody">
+                    <div class="empty-trace">
+                        <span class="icon">⚙️</span>
+                        <p>Henüz bir soru sorulmadı.</p>
+                        <small>Bir soru gönderdiğinizde araç çağrıları canlı olarak burada belirecektir.</small>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="main-footer">
+            <p>⚙️ <b>Teknolojiler:</b> HTML5, CSS3, JavaScript (ES6+), Multi-API Tool Calling Engine, Aladhan API, AlQuran API, Diyanet Takvimi.</p>
+            <p>📌 <b>Ödev Teslim Projesi:</b> Hugging Face Spaces (Static SDK) & GitHub Entegrasyonu.</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
 </html>
