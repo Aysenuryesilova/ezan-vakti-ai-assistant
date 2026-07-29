@@ -33,7 +33,7 @@ Bu proje, açık veri kaynakları (Public APIs) ve istemci tarafı (Client-Side)
 
 ## 🛠️ Tanımlı Araçlar (Tool Definitions)
 
-- `get_prayer_times(city, country, date)`: Ezan vakitlerini çeker.
+- `get_prayer_times(location, country, date)`: Ezan vakitlerini çeker.
 - `convert_gregorian_to_hijri(date)`: Hicri takvime dönüştürür.
 - `search_quran_verse(query)`: Kur'an ayeti ve Diyanet mealini getirir.
 - `search_hadith(query)`: Sahih Hadis-i Şerif ve kaynağını getirir.

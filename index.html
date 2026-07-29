@@ -16,9 +16,15 @@
             <div class="header-icon">🕌</div>
             <div class="header-content">
                 <h1>Dini İlimler & Ezan Vakti AI Asistanı</h1>
-                <p>81 İl + İlçeler | 114 Sûre Kur'an API | Diyanet İlmihali & Sahih Hadis Veritabanı</p>
+                <p>81 İl + İlçeler | Sesli Okuma (TTS) | Canlı Ezan Geri Sayımı | Kıble Açısı: 154° K-G</p>
             </div>
-            <div class="hf-badge">Hugging Face Space Live</div>
+            
+            <!-- Live Prayer Countdown Widget -->
+            <div class="widget-box" id="prayerCountdownWidget">
+                ⏳ <b>Sonraki Ezan Vakti:</b> <span>Yükleniyor...</span>
+            </div>
+
+            <div class="hf-badge">HF Space Live</div>
         </header>
 
         <!-- Main Content -->
@@ -27,16 +33,29 @@
             <section class="card chat-card">
                 <div class="card-header">
                     <h2>💬 Asistan ile Sohbet Edin</h2>
-                    <span class="status-indicator">● Canlı & Aktif</span>
+                    <div class="header-actions">
+                        <select id="detailSelect" class="detail-select">
+                            <option value="detailed" selected>📖 Detaylı İlmihal Açıklaması</option>
+                            <option value="short">⚡ Kısa Özet</option>
+                        </select>
+                        <span class="status-indicator">● Canlı</span>
+                    </div>
                 </div>
                 
                 <div class="chat-history" id="chatHistory">
                     <div class="message bot-message">
                         <div class="avatar">🤖</div>
                         <div class="message-content">
-                            <p><strong>Selamün Aleyküm!</strong> Ben gelişmiş Dini İlimler ve Ezan Vakti AI Asistanınızım.</p>
-                            <p>Bana Türkiye'nin <strong>tüm il ve ilçelerinin</strong> ezan vakitlerini, Diyanet İlmihali fıkıh sorularını (Abdestin/Namazın farzları), Kur'an-ı Kerim 114 sûre mealini ve sahih hadisleri sorabilirsiniz.</p>
-                            <p><em>Örnek: "Muş Malazgirt ezan vakti nedir?" veya "Abdestin farzları nelerdir?"</em></p>
+                            <div class="response-text">
+                                <p><strong>Selamün Aleyküm!</strong> Ben gelişmiş Dini İlimler ve Ezan Vakti AI Asistanınızım.</p>
+                                <p>Tüm yanıtlarımı <strong>🔊 Sesli Okuma</strong> özelliğiyle dinleyebilir, <strong>📋 Kopyalayabilir</strong> veya <strong>⭐ Favorilere Kaydedebilirsiniz</strong>.</p>
+                                <p><em>Örnek: "Hocam sakız çiğnersem orucum bozulur mu?" veya "Muş Malazgirt ezan vakti nedir?"</em></p>
+                            </div>
+                            <div class="action-buttons">
+                                <button class="action-btn copy-btn" onclick="copyToClipboard(this)">📋 Kopyala</button>
+                                <button class="action-btn tts-btn" onclick="speakText(this)">🔊 Sesli Oku</button>
+                                <button class="action-btn fav-btn" onclick="saveFavorite(this)">⭐ Favorilere Ekle</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -44,15 +63,15 @@
                 <!-- Example Chips -->
                 <div class="example-chips">
                     <span class="chip-title">💡 Örnek Sorgular:</span>
-                    <button class="chip" onclick="fillQuery(this.innerText)">Abdestin farzları nelerdir ve abdest hakkındaki ayet meali nedir?</button>
+                    <button class="chip" onclick="fillQuery(this.innerText)">Hocam sakız çiğnersem orucum bozulur mu?</button>
+                    <button class="chip" onclick="fillQuery(this.innerText)">Dişim kanadı veya yara kanadı abdestim bozuldu mu?</button>
                     <button class="chip" onclick="fillQuery(this.innerText)">Muş Malazgirt ezan vakitleri nedir ve Akşama kaç saat var?</button>
-                    <button class="chip" onclick="fillQuery(this.innerText)">Yasin Sûresi 1. ayeti ve Diyanet meali nedir?</button>
-                    <button class="chip" onclick="fillQuery(this.innerText)">Namazın 12 farzı nelerdir?</button>
+                    <button class="chip" onclick="fillQuery(this.innerText)">İslam'da zekat kimlere verilir ve nisap miktarı nedir?</button>
                 </div>
 
                 <!-- Form -->
                 <form id="chatForm" class="input-form">
-                    <input type="text" id="userInput" placeholder="Soru yazınız (ör. 'Muş Malazgirt ezan' veya 'Abdestin farzları')..." autocomplete="off" required>
+                    <input type="text" id="userInput" placeholder="Soru yazınız (ör. 'Abdestin farzları' veya 'Muş ezan')..." autocomplete="off" required>
                     <button type="submit" id="sendBtn" class="btn-primary">
                         <span>Gönder</span> 🚀
                     </button>
@@ -67,7 +86,7 @@
                 </div>
 
                 <div class="trace-intro">
-                    <p>ℹ️ <strong>Ödev Şartı Gösterimi:</strong> Modelin arka planda hangi harici API'leri tetiklediği (İlmihal, Aladhan, AlQuran Cloud), parametreleri ve JSON yanıtları <code>[Turn 1]</code> ve <code>[Turn 2]</code> olarak burada sergilenir.</p>
+                    <p>ℹ️ <strong>Ödev Şartı Gösterimi:</strong> Modelin arka planda hangi harici API'leri tetiklediği (İlmihal, Aladhan), parametreleri ve JSON yanıtları <code>[Turn 1]</code> ve <code>[Turn 2]</code> olarak burada sergilenir.</p>
                 </div>
 
                 <div class="trace-log-body" id="traceLogBody">
@@ -82,7 +101,7 @@
 
         <!-- Footer -->
         <footer class="main-footer">
-            <p>⚙️ <b>Teknolojiler:</b> HTML5, CSS3, JavaScript, Diyanet İlmihali API, Aladhan District API, AlQuran Cloud 114 Surah API.</p>
+            <p>⚙️ <b>Teknolojiler:</b> HTML5, CSS3, ES6+ JS Engine, Text-to-Speech, Live Countdown, Diyanet İlmihali DB, Aladhan API.</p>
             <p>📌 <b>Ödev Teslim Projesi:</b> Hugging Face Spaces (Static SDK) & GitHub Entegrasyonu.</p>
         </footer>
     </div>
