@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dini İlimler & Ezan Vakti AI Asistanı</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -17,14 +16,14 @@
             <div class="header-icon">🕌</div>
             <div class="header-content">
                 <h1>Dini İlimler & Ezan Vakti AI Asistanı</h1>
-                <p>Multi-API Tool Calling Engine | Aladhan, AlQuran Cloud & Sahih Hadis Veritabanı</p>
+                <p>81 İl + İlçeler | 114 Sûre Kur'an API | Diyanet İlmihali & Sahih Hadis Veritabanı</p>
             </div>
             <div class="hf-badge">Hugging Face Space Live</div>
         </header>
 
-        <!-- Main Content (2 Columns Layout) -->
+        <!-- Main Content -->
         <main class="content-grid">
-            <!-- Left Panel: Chat Interface -->
+            <!-- Left Panel: Chat -->
             <section class="card chat-card">
                 <div class="card-header">
                     <h2>💬 Asistan ile Sohbet Edin</h2>
@@ -32,35 +31,35 @@
                 </div>
                 
                 <div class="chat-history" id="chatHistory">
-                    <!-- Default Welcome Message -->
                     <div class="message bot-message">
                         <div class="avatar">🤖</div>
                         <div class="message-content">
-                            <p><strong>Selamün Aleyküm!</strong> Ben Dini İlimler ve Ezan Vakti AI Asistanınızım.</p>
-                            <p>Bana ezan vakitlerini, hicri takvimi, ayet ve meal meallerini, sahih hadisleri ve fıkhi sorularınızı sorabilirsiniz.</p>
-                            <p><em>Örnek: "İstanbul'da Akşam namazına kaç saat var ve abdest hakkındaki ayet nedir?"</em></p>
+                            <p><strong>Selamün Aleyküm!</strong> Ben gelişmiş Dini İlimler ve Ezan Vakti AI Asistanınızım.</p>
+                            <p>Bana Türkiye'nin <strong>tüm il ve ilçelerinin</strong> ezan vakitlerini, Diyanet İlmihali fıkıh sorularını (Abdestin/Namazın farzları), Kur'an-ı Kerim 114 sûre mealini ve sahih hadisleri sorabilirsiniz.</p>
+                            <p><em>Örnek: "Muş Malazgirt ezan vakti nedir?" veya "Abdestin farzları nelerdir?"</em></p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Example Chips -->
                 <div class="example-chips">
-                    <span class="chip-title">💡 Hazır Sorular:</span>
-                    <button class="chip" onclick="fillQuery(this.innerText)">İstanbul'da bugün Akşam namazına kaç saat kaldı ve bugün Hicri takvimde hangi güne denk geliyor?</button>
-                    <button class="chip" onclick="fillQuery(this.innerText)">Abdesti bozan durumlar ve abdest hakkındaki Kur'an ayeti ile Hadis-i Şerif nedir?</button>
-                    <button class="chip" onclick="fillQuery(this.innerText)">Ankara için bugünkü ezan vakitleri nelerdir ve 2026 yılı Kadir Gecesi ne zaman?</button>
+                    <span class="chip-title">💡 Örnek Sorgular:</span>
+                    <button class="chip" onclick="fillQuery(this.innerText)">Abdestin farzları nelerdir ve abdest hakkındaki ayet meali nedir?</button>
+                    <button class="chip" onclick="fillQuery(this.innerText)">Muş Malazgirt ezan vakitleri nedir ve Akşama kaç saat var?</button>
+                    <button class="chip" onclick="fillQuery(this.innerText)">Yasin Sûresi 1. ayeti ve Diyanet meali nedir?</button>
+                    <button class="chip" onclick="fillQuery(this.innerText)">Namazın 12 farzı nelerdir?</button>
                 </div>
 
-                <!-- Input Box -->
+                <!-- Form -->
                 <form id="chatForm" class="input-form">
-                    <input type="text" id="userInput" placeholder="Soru yazınız (ör. 'İstanbul namaz vakitleri ve abdest ayeti')..." autocomplete="off" required>
+                    <input type="text" id="userInput" placeholder="Soru yazınız (ör. 'Muş Malazgirt ezan' veya 'Abdestin farzları')..." autocomplete="off" required>
                     <button type="submit" id="sendBtn" class="btn-primary">
                         <span>Gönder</span> 🚀
                     </button>
                 </form>
             </section>
 
-            <!-- Right Panel: Homework Evaluator Tool Call Trace Log -->
+            <!-- Right Panel: Trace Logs -->
             <section class="card trace-card">
                 <div class="card-header">
                     <h2>🔍 Arka Plan Araç (Tool) Çağrı İzleme</h2>
@@ -68,7 +67,7 @@
                 </div>
 
                 <div class="trace-intro">
-                    <p>ℹ️ <strong>Ödev Şartı Gösterimi:</strong> Modelin arka planda hangi harici API'leri tetiklediği, parametreleri ve dönen JSON yanıtları <code>[Turn 1]</code> ve <code>[Turn 2]</code> olarak burada sergilenir.</p>
+                    <p>ℹ️ <strong>Ödev Şartı Gösterimi:</strong> Modelin arka planda hangi harici API'leri tetiklediği (İlmihal, Aladhan, AlQuran Cloud), parametreleri ve JSON yanıtları <code>[Turn 1]</code> ve <code>[Turn 2]</code> olarak burada sergilenir.</p>
                 </div>
 
                 <div class="trace-log-body" id="traceLogBody">
@@ -83,7 +82,7 @@
 
         <!-- Footer -->
         <footer class="main-footer">
-            <p>⚙️ <b>Teknolojiler:</b> HTML5, CSS3, JavaScript (ES6+), Multi-API Tool Calling Engine, Aladhan API, AlQuran API, Diyanet Takvimi.</p>
+            <p>⚙️ <b>Teknolojiler:</b> HTML5, CSS3, JavaScript, Diyanet İlmihali API, Aladhan District API, AlQuran Cloud 114 Surah API.</p>
             <p>📌 <b>Ödev Teslim Projesi:</b> Hugging Face Spaces (Static SDK) & GitHub Entegrasyonu.</p>
         </footer>
     </div>
