@@ -1,254 +1,168 @@
 """
-agent.py - Multi-Turn Tool Calling & Execution Engine (Python Version)
+agent.py - Tool Calling ve Jinja2 Entegrasyonlu Ajan Motoru
+Bu modül; kullanıcının sorgularını analiz eder, uygun aracı (Aladhan API veya SQLite) 
+tetikler ve Jinja2 şablonunu kullanarak model bağlamını hazırlar.
 """
 
 import os
-import json
-import re
-from typing import Tuple, List, Dict, Any
-from tools import (
-    TOOLS_SCHEMA, AVAILABLE_TOOLS, get_prayer_times,
-    convert_gregorian_to_hijri, search_quran_verse,
-    search_hadith, get_religious_days, calculate_time_difference
-)
+from jinja2 import Template
+from database import init_database
+from tools import AVAILABLE_TOOLS, TOOLS_SCHEMA, get_prayer_times, save_inquiry_tool, get_all_inquiries_tool
 
-TURKEY_CITIES = [
-    "adana", "adiyaman", "afyon", "afyonkarahisar", "agri", "amasya", "ankara", "antalya", "artvin", "aydin",
-    "balikesir", "bilecik", "bingol", "bitlis", "bolu", "burdur", "bursa", "canakkale", "cankiri", "corum",
-    "denizli", "diyarbakir", "edirne", "elazig", "erzincan", "erzurum", "eskisehir", "gaziantep", "giresun", "gumushane",
-    "hakkari", "hatay", "isparta", "mersin", "icel", "istanbul", "izmir", "kars", "kastamonu", "kayseri",
-    "kirklareli", "kirsehir", "kocaeli", "konya", "kutahya", "malatya", "manisa", "kahramanmaras", "maras", "mardin",
-    "mugla", "mus", "nevsehir", "nigde", "ordu", "rize", "sakarya", "samsun", "siirt", "sinop",
-    "sivas", "tekirdag", "tokat", "trabzon", "tunceli", "sanliurfa", "urfa", "usak", "van", "yozgat",
-    "zonguldak", "aksaray", "bayburt", "karaman", "kirikkale", "batman", "sirnak", "bartin", "ardahan", "igdir",
-    "yalova", "karabuk", "kilis", "osmaniye", "duzce", "londra", "london", "berlin", "mekke", "medine", "kudus"
-]
-
-def normalize_text(text: str) -> str:
-    tr_map = {
-        'ç': 'c', 'ğ': 'g', 'ı': 'i', 'i': 'i', 'ö': 'o', 'ş': 's', 'ü': 'u',
-        'Ç': 'c', 'Ğ': 'g', 'İ': 'i', 'I': 'i', 'Ö': 'o', 'Ş': 's', 'Ü': 'u'
-    }
-    res = text.lower()
-    for k, v in tr_map.items():
-        res = res.replace(k, v)
-    return res
-
-def extract_city(norm_query: str) -> str:
-    words = re.findall(r'\b[a-z]+\b', norm_query)
-    for word in words:
-        if word in TURKEY_CITIES:
-            if word == "mus": return "Mus"
-            if word in ["maras", "kahramanmaras"]: return "Kahramanmaras"
-            if word in ["urfa", "sanliurfa"]: return "Sanliurfa"
-            if word in ["icel", "mersin"]: return "Mersin"
-            return word.capitalize()
-    return None
-
-class IslamicAssistantAgent:
-    def __init__(self, api_key: str = None):
-        self.api_key = api_key or os.environ.get("GEMINI_API_KEY")
-        self.use_llm = False
-
-    def run(self, user_query: str) -> Tuple[str, List[Dict[str, Any]]]:
-        trace_logs = []
-        norm_query = normalize_text(user_query)
-        collected_data = {}
-
-        # ------------------------------------------
-        # TURN 1: Birincil Araç Çağrıları
-        # ------------------------------------------
-        turn1_calls = []
-        detected_city = extract_city(norm_query)
-
-        # 1.1 Namaz Vakitleri (Şehir belirtildiyse veya vakit/ezan sorulduysa)
-        wants_prayer = (detected_city is not None) or any(kw in norm_query for kw in ["ezan", "vakit", "imsak", "ogle", "ikindi", "aksam", "yatsi", "kac saat"])
-        if wants_prayer:
-            city_to_query = detected_city if detected_city else "Istanbul"
-            turn1_calls.append({
-                "tool": "get_prayer_times",
-                "args": {"city": city_to_query, "country": "Turkey", "date": "today"}
-            })
-
-        # 1.2 Hicri Takvim
-        if any(kw in norm_query for kw in ["hicri", "takvim", "tarih", "hangi gun", "gunu"]):
-            turn1_calls.append({
-                "tool": "convert_gregorian_to_hijri",
-                "args": {"date": "today"}
-            })
-
-        # 1.3 Kur'an Ayet
-        if any(kw in norm_query for kw in ["ayet", "kuran", "sure", "meal", "abdest", "oruc", "kadir", "sirala"]):
-            term = "namaz"
-            if "abdest" in norm_query: term = "abdest"
-            elif "oruc" in norm_query: term = "oruc"
-            elif "kadir" in norm_query: term = "kadir"
-
-            turn1_calls.append({
-                "tool": "search_quran_verse",
-                "args": {"query": term}
-            })
-
-        # 1.4 Hadis
-        if any(kw in norm_query for kw in ["hadis", "peygamber", "buhari", "muslim", "niyet", "guler yuz", "komsu", "ahlak", "fikih"]):
-            term = "namaz"
-            if "niyet" in norm_query: term = "niyet"
-            elif "abdest" in norm_query: term = "abdest"
-
-            turn1_calls.append({
-                "tool": "search_hadith",
-                "args": {"query": term}
-            })
-
-        # 1.5 Dini Günler
-        if any(kw in norm_query for kw in ["kandil", "bayram", "ramazan ne zaman", "dini gun"]):
-            turn1_calls.append({
-                "tool": "get_religious_days",
-                "args": {"year": 2026}
-            })
-
-        if not turn1_calls:
-            turn1_calls.append({"tool": "search_quran_verse", "args": {"query": "namaz"}})
-            turn1_calls.append({"tool": "search_hadith", "args": {"query": "namaz"}})
-
-        # Turn 1 Çağrılarını Yürüt
-        turn1_results = []
-        for call in turn1_calls:
-            tool_name = call["tool"]
-            args = call["args"]
-            fn = AVAILABLE_TOOLS[tool_name]
-            result = fn(**args)
-            collected_data[tool_name] = result
-            turn1_results.append({
-                "tool_name": tool_name,
-                "input_arguments": args,
-                "output_response": result
-            })
-
-        trace_logs.append({
-            "turn_number": 1,
-            "phase": "Birincil Araç Çağrıları (Turn 1)",
-            "calls": turn1_results
-        })
-
-        # ------------------------------------------
-        # TURN 2: İkincil Hesaplama Araçları
-        # ------------------------------------------
-        turn2_calls = []
-        if "get_prayer_times" in collected_data and any(kw in norm_query for kw in ["kac saat", "kaldi", "fark", "aralarinda", "saat var"]):
-            pt_data = collected_data["get_prayer_times"]
-            if pt_data.get("status") == "success":
-                times = pt_data["prayer_times"]
-                target_time = times.get("Maghrib (Akşam)")
-                if "ikindi" in norm_query: target_time = times.get("Asr (İkindi)")
-                elif "yatsi" in norm_query: target_time = times.get("Isha (Yatsı)")
-                elif "ogle" in norm_query: target_time = times.get("Dhuhr (Öğle)")
-
-                turn2_calls.append({
-                    "tool": "calculate_time_difference",
-                    "args": {"time1": "now", "time2": target_time}
-                })
-
-        if turn2_calls:
-            turn2_results = []
-            for call in turn2_calls:
-                tool_name = call["tool"]
-                args = call["args"]
-                fn = AVAILABLE_TOOLS[tool_name]
-                result = fn(**args)
-                collected_data[tool_name] = result
-                turn2_results.append({
-                    "tool_name": tool_name,
-                    "input_arguments": args,
-                    "output_response": result
-                })
-
-            trace_logs.append({
-                "turn_number": 2,
-                "phase": "İkincil Hesaplama Araç Çağrıları (Turn 2)",
-                "calls": turn2_results
-            })
-
-        # ------------------------------------------
-        # TURN 3: Sentez ve Yanıt
-        # ------------------------------------------
-        final_answer = self._synthesize_final_response(user_query, collected_data)
-        return final_answer, trace_logs
-
-    def _synthesize_final_response(self, user_query: str, tool_data: Dict[str, Any]) -> str:
-        sections = []
-        citations = []
-
-        if "get_prayer_times" in tool_data:
-            pt = tool_data["get_prayer_times"]
-            if pt.get("status") == "success":
-                city = pt["city"]
-                times = pt["prayer_times"]
-                sections.append(
-                    f"📍 **{city} için Bugünün Ezan/Namaz Vakitleri:**\n"
-                    f"• **İmsak:** {times['Fajr (İmsak)']}\n"
-                    f"• **Güneş:** {times['Sunrise (Güneş)']}\n"
-                    f"• **Öğle:** {times['Dhuhr (Öğle)']}\n"
-                    f"• **İkindi:** {times['Asr (İkindi)']}\n"
-                    f"• **Akşam:** {times['Maghrib (Akşam)']}\n"
-                    f"• **Yatsı:** {times['Isha (Yatsı)']}"
-                )
-                citations.append(f"• Namaz Vakitleri Kaynağı: {pt.get('source', 'Aladhan Servisi')}")
-
-        if "calculate_time_difference" in tool_data:
-            td = tool_data["calculate_time_difference"]
-            if td.get("status") == "success":
-                sections.append(
-                    f"⏳ **Hedef Vakte Kalan Süre:**\n"
-                    f"Şu anki saatten hedef ezan vaktine ({td['to_time']}) yaklaşık **{td['formatted_difference']}** bulunmaktadır."
-                )
-
-        if "convert_gregorian_to_hijri" in tool_data:
-            hj = tool_data["convert_gregorian_to_hijri"]
-            if hj.get("status") == "success":
-                sections.append(
-                    f"📅 **Hicri Takvim Bilgisi:**\n"
-                    f"Bugün Hicri takvime göre **{hj['full_hijri_date']}** günüdür."
-                )
-                citations.append(f"• Takvim Kaynağı: {hj.get('source', 'Aladhan Hijri Converter')}")
-
-        if "search_quran_verse" in tool_data:
-            qv = tool_data["search_quran_verse"]
-            if qv.get("status") == "success":
-                sections.append(
-                    f"📖 **Kur'an-ı Kerim Rehberliği:**\n"
-                    f"*{qv['turkish_translation']}*\n"
-                    f"👉 **Ayet Referansı:** `{qv['citation']}`"
-                )
-                citations.append(f"• Ayet Meali Kaynağı: {qv['citation']}")
-
-        if "search_hadith" in tool_data:
-            hd = tool_data["search_hadith"]
-            if hd.get("status") == "success":
-                sections.append(
-                    f"💬 **Hadis-i Şerif Referansı:**\n"
-                    f"*{hd['hadith_text']}*\n"
-                    f"👉 **Hadis Kaynağı:** `{hd['citation']}`"
-                )
-                citations.append(f"• Hadis Kaynağı: {hd['citation']}")
-
-        if "get_religious_days" in tool_data:
-            rd = tool_data["get_religious_days"]
-            if rd.get("status") == "success":
-                upcoming = rd["events"][:4]
-                event_str = "\n".join([f"• **{e['event']}:** {e['date']} ({e['hijri']})" for e in upcoming])
-                sections.append(
-                    f"🌙 **Önümüzdeki Dini Gün ve Geceler ({rd['year']}):**\n{event_str}"
-                )
-                citations.append(f"• Dini Günler Kaynağı: {rd.get('source', 'Diyanet Takvimi')}")
-
-        body = "\n\n---\n\n".join(sections)
-        citations_unique = list(set(citations))
-        citations_formatted = "\n".join(citations_unique)
+class IslamicToolCallingAgent:
+    def __init__(self):
+        # Veritabanı tablolarının ve başlangıç verilerinin hazır olduğundan emin oluyoruz
+        init_database()
         
-        return (
-            f"{body}\n\n"
-            f"📚 **Resmi Veri Kaynakları:**\n"
-            f"{citations_formatted}\n\n"
-            f"Allah ibadetlerinizi kabul buyursun. Başka bir sorunuz veya öğrenmek istediğiniz vakit var mı?"
-        )
+        # Jinja2 şablonumuzu src klasörünün içinden yüklüyoruz
+        template_path = os.path.join(os.path.dirname(__file__), "chat_template.jinja")
+        with open(template_path, "r", encoding="utf-8") as f:
+            self.template_content = f.read()
+            
+    def render_chat_prompt(self, messages: list) -> str:
+        """Jinja2 şablonunu kullanarak mesaj geçmişini modelin anlayacağı formata dönüştürür."""
+        template = Template(self.template_content)
+        return template.render(messages=messages, add_generation_prompt=True)
+
+    def run(self, user_query: str) -> tuple:
+        """
+        Kullanıcı sorgusunu işler, niyet analizi yapar, uygun aracı çağırır 
+        ve hem nihai yanıtı hem de ödev için gereken trace logları döndürür.
+        
+        Returns:
+            tuple: (final_answer: str, trace_logs: list, formatted_jinja_prompt: str)
+        """
+        query_lower = user_query.lower()
+        trace_logs = []
+        messages = [
+            {
+                "role": "system", 
+                "content": "Sen yetkin bir Dini İlimler ve Fetva Takip Asistanısın. Veritabanı ve API araçlarını kullanarak halüsinasyon görmeden doğru yanıtlar üretirsin."
+            },
+            {"role": "user", "content": user_query}
+        ]
+
+        # 1. Jinja2 şablonu ile prompt oluşturma (Hafta 3.2 1. Ödev Gereksinimi)
+        formatted_prompt = self.render_chat_prompt(messages)
+
+        tool_to_call = None
+        tool_args = {}
+        tool_result = None
+        turn_counter = 1
+
+        # 2. Niyet Analizi (Intent Recognition) ve Tool Seçimi (Hafta 3.1 & 3.2 2. Ödev Gereksinimi)
+        
+        # Senaryo A: Ezan / Namaz Vakitleri (Public Aladhan API - Read)
+        if any(keyword in query_lower for keyword in ["ezan", "namaz vakti", "vakitleri", "imsak", "öğle", "ikindi", "akşam", "yatsı"]):
+            # Şehir tespiti
+            cities = ["istanbul", "ankara", "izmir", "bursa", "antalya", "adana", "konya", "gaziantep", "şanlıurfa", "kocaeli", "malatya", "erzurum", "trabzon", "diyarbakır", "eskişehir", "kayseri", "samsun"]
+            found_city = "Istanbul"
+            for city in cities:
+                if city in query_lower:
+                    found_city = city.title()
+                    break
+            
+            tool_to_call = "get_prayer_times"
+            tool_args = {"city": found_city, "country": "Turkey"}
+            tool_result = get_prayer_times(city=found_city, country="Turkey")
+            
+            # Trace log ekleme
+            trace_logs.append({
+                "turn": turn_counter,
+                "tool_name": tool_to_call,
+                "arguments": tool_args,
+                "response": tool_result
+            })
+            
+            if tool_result.get("status") == "success":
+                times = tool_result["prayer_times"]
+                final_answer = (
+                    f"🕌 **{tool_result['city']} için Namaz Vakitleri** ({tool_result['date']}):\n\n"
+                    f"• **İmsak:** {times['İmsak']}\n"
+                    f"• **Güneş:** {times['Güneş']}\n"
+                    f"• **Öğle:** {times['Öğle']}\n"
+                    f"• **İkindi:** {times['İkindi']}\n"
+                    f"• **Akşam:** {times['Akşam']}\n"
+                    f"• **Yatsı:** {times['Yatsı']}\n\n"
+                    f"📌 *Kaynak: {tool_result['source']}*"
+                )
+            else:
+                final_answer = f"⚠️ Namaz vakitleri alınamadı: {tool_result.get('message')}"
+
+        # Senaryo B: Soru/Fetva Kaydetme (SQLite - Write)
+        elif any(keyword in query_lower for keyword in ["kaydet", "soru ekle", "fetva kaydet", "kayıt ekle"]):
+            topic = "Genel Fıkıh"
+            if "namaz" in query_lower: topic = "Namaz"
+            elif "oruç" in query_lower: topic = "Oruç"
+            elif "zekat" in query_lower: topic = "Zekat"
+            elif "abdest" in query_lower: topic = "Abdest"
+            
+            tool_to_call = "save_inquiry_tool"
+            tool_args = {"topic": topic, "question": user_query, "user_name": "Ayşe Nur"}
+            tool_result = save_inquiry_tool(topic=topic, question=user_query, user_name="Ayşe Nur")
+            
+            trace_logs.append({
+                "turn": turn_counter,
+                "tool_name": tool_to_call,
+                "arguments": tool_args,
+                "response": tool_result
+            })
+            
+            final_answer = (
+                f"✅ **Fetva/Soru Talebiniz Başarıyla Kaydedildi!**\n\n"
+                f"• **Kayıt ID:** #{tool_result['record']['id']}\n"
+                f"• **Konu:** {tool_result['record']['topic']}\n"
+                f"• **Kullanıcı:** {tool_result['record']['user_name']}\n"
+                f"• **Tarih:** {tool_result['record']['created_at']}\n"
+                f"• **Soru:** {tool_result['record']['question']}\n\n"
+                f"📌 *Soru veritabanına eklenmiştir. 'Kayıtları listele' yazarak tüm geçmiş soruları görebilirsiniz.*"
+            )
+
+        # Senaryo C: Kayıtlı Soruları Listeleme (SQLite - Read)
+        elif any(keyword in query_lower for keyword in ["listele", "kayıtlar", "geçmiş sorular", "tüm sorular", "sorularım"]):
+            tool_to_call = "get_all_inquiries_tool"
+            tool_args = {}
+            tool_result = get_all_inquiries_tool()
+            
+            trace_logs.append({
+                "turn": turn_counter,
+                "tool_name": tool_to_call,
+                "arguments": tool_args,
+                "response": tool_result
+            })
+            
+            records = tool_result.get("records", [])
+            if records:
+                records_text = "\n".join([
+                    f"#{r['id']} | [{r['topic']}] {r['user_name']} ({r['created_at']}): {r['question']}"
+                    for r in records
+                ])
+                final_answer = (
+                    f"📋 **Veritabanındaki Kayıtlı Fıkhi Sorular (Toplam: {tool_result['total_count']})**:\n\n"
+                    f"{records_text}"
+                )
+            else:
+                final_answer = "📋 Veritabanında henüz kayıtlı bir soru bulunmamaktadır."
+
+        # Senaryo D: Genel Fıkhi Soru (Doğrudan Bilgi Verme)
+        else:
+            final_answer = (
+                f"📖 **Fıkhi Bilgi Asistanı**:\n\n"
+                f"Sorgunuz: '{user_query}'\n\n"
+                f"Namaz, ibadet kuralları ve fıkhi konular ile ilgili sorularınızı sorabilir, "
+                f"şehir bazlı namaz vakitlerini öğrenebilir (ör: 'İstanbul namaz vakitleri') "
+                f"veya sorunuzu veritabanına kaydedebilirsiniz (ör: 'Bu soruyu kaydet: Sehiv secdesi ne zaman yapılır?')."
+            )
+
+        # Mesaj geçmişine asistan cevabını da ekleyip güncellenmiş Jinja2 promptunu alıyoruz
+        messages.append({"role": "assistant", "content": final_answer})
+        updated_prompt = self.render_chat_prompt(messages)
+
+        return final_answer, trace_logs, updated_prompt
+
+if __name__ == "__main__":
+    agent = IslamicToolCallingAgent()
+    ans, logs, prompt = agent.run("İstanbul için namaz vakitleri nedir?")
+    print("ANSWER:\n", ans)
+    print("\nLOGS:\n", logs)
+    print("\nJINJA PROMPT:\n", prompt)
